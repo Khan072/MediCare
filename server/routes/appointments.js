@@ -10,16 +10,22 @@ const genAptNum = () => "APT" + Date.now().toString().slice(-6) + Math.floor(Mat
 // POST /api/appointments — Book a new appointment (auth required)
 router.post("/", protect, async (req, res) => {
     try {
-        const { doctor, date, slot, reason, symptoms, paymentIntentId } = req.body;
+        const { doctor, date, slot, reason, symptoms, paymentIntentId, paymentMethod } = req.body;
 
-        // Verify payment with Stripe if paymentIntentId is provided
+        // --- Pay Later flow: skip Stripe, book immediately ---
         let paymentData = {
             status: "pending",
             amount: doctor.fee,
             method: "online",
         };
 
-        if (paymentIntentId) {
+        if (paymentMethod === "pay_later") {
+            paymentData = {
+                amount: doctor.fee,
+                status: "pending",
+                method: "pay_later",
+            };
+        } else if (paymentIntentId) {
             try {
                 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
                 const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);

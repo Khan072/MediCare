@@ -36,7 +36,7 @@ const appointmentSchema = new mongoose.Schema(
                 enum: ["pending", "succeeded", "failed", "refunded"],
                 default: "pending",
             },
-            method: { type: String, default: "online" },
+            method: { type: String, enum: ["online", "pay_later"], default: "online" },
         },
     },
     { timestamps: true }

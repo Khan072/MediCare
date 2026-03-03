@@ -184,7 +184,12 @@ export default function Dash({ go }) {
                                                 </div>
                                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: ".6rem" }}>
                                                     <span style={{ padding: ".24rem .7rem", borderRadius: 99, fontSize: ".7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".3px", ...(isc ? { background: "#d1fae5", color: "#065f46" } : isx ? { background: "#fee2e2", color: "#991b1b" } : { background: "#dbeafe", color: "#1e40af" }) }}>{isc ? "✅ Confirmed" : isx ? "❌ Cancelled" : "🏁 Completed"}</span>
-                                                    <div style={{ fontWeight: 700, color: "var(--pm)", fontSize: ".9rem" }}>₹{apt.fee}</div>
+                                                    <div style={{ fontWeight: 700, color: "var(--pm)", fontSize: ".9rem", display: "flex", alignItems: "center", gap: ".4rem" }}>
+                                                        ₹{apt.fee}
+                                                        {apt.payment?.method === "pay_later" && apt.payment?.status !== "succeeded" && (
+                                                            <span style={{ background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a", padding: ".12rem .45rem", borderRadius: 99, fontSize: ".6rem", fontWeight: 700 }}>💰 Pay Later</span>
+                                                        )}
+                                                    </div>
                                                     <div style={{ display: "flex", gap: ".4rem" }}>
                                                         <button className="btn bP sm" onClick={() => svw(apt)}>View Slip</button>
                                                         {isc && <button onClick={() => cancel(apt._id || apt.id)} style={{ background: "#fee2e2", color: "#991b1b", border: "none", fontWeight: 600, padding: ".35rem .7rem", borderRadius: 6, cursor: "pointer", fontSize: ".78rem", fontFamily: "inherit" }}>Cancel</button>}

@@ -41,6 +41,7 @@ export default function Slip({ apt, onBack, onNew }) {
       <tr><td>Reason</td><td>${rsn}</td></tr>
       ${sym.length ? `<tr><td>Symptoms</td><td>${sym.join(", ")}</td></tr>` : ""}
       <tr><td>Consultation Fee</td><td><strong>₹${fee}</strong></td></tr>
+      <tr><td>Payment</td><td><strong>${apt.payment?.method === "pay_later" && apt.payment?.status !== "succeeded" ? "⏳ Pay at Hospital" : apt.payment?.status === "succeeded" ? "✅ Paid Online" : "⏳ Pending"}</strong></td></tr>
     </table>
     <div class="note">⏰ Arrive 15 min early &nbsp;|&nbsp; 🪪 Carry this slip + valid ID &nbsp;|&nbsp; 📁 Bring prior prescriptions</div>
     <p style="color:#9e9e9e;font-size:12px;margin-top:16px">Generated: ${new Date().toLocaleString()} · MediCare Hospital</p>
@@ -83,25 +84,32 @@ export default function Slip({ apt, onBack, onNew }) {
                         ))}
                     </div>
                     {/* Payment Status */}
-                    {apt.payment && (
-                        <div style={{ background: apt.payment.status === "succeeded" ? "#e8f5e9" : "#fff8e1", border: `1.5px solid ${apt.payment.status === "succeeded" ? "#a5d6a7" : "#ffe082"}`, borderRadius: 10, padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: ".5rem" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: ".6rem" }}>
-                                <span style={{ fontSize: "1.25rem" }}>{apt.payment.status === "succeeded" ? "✅" : "⏳"}</span>
-                                <div>
-                                    <div style={{ fontSize: ".67rem", color: "var(--g5)", textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 1 }}>Payment Status</div>
-                                    <div style={{ fontWeight: 700, fontSize: ".875rem", color: apt.payment.status === "succeeded" ? "#2e7d32" : "#f57f17" }}>
-                                        {apt.payment.status === "succeeded" ? "PAID" : apt.payment.status?.toUpperCase() || "PENDING"}
+                    {apt.payment && (() => {
+                        const isPayLater = apt.payment.method === "pay_later" && apt.payment.status !== "succeeded";
+                        const isPaid = apt.payment.status === "succeeded";
+                        const bgColor = isPaid ? "#e8f5e9" : isPayLater ? "#fffbeb" : "#fff8e1";
+                        const borderColor = isPaid ? "#a5d6a7" : isPayLater ? "#fde68a" : "#ffe082";
+                        const statusIcon = isPaid ? "✅" : isPayLater ? "🏥" : "⏳";
+                        const statusText = isPaid ? "PAID" : isPayLater ? "PAY AT HOSPITAL" : apt.payment.status?.toUpperCase() || "PENDING";
+                        const statusColor = isPaid ? "#2e7d32" : isPayLater ? "#92400e" : "#f57f17";
+                        return (
+                            <div style={{ background: bgColor, border: `1.5px solid ${borderColor}`, borderRadius: 10, padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: ".5rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: ".6rem" }}>
+                                    <span style={{ fontSize: "1.25rem" }}>{statusIcon}</span>
+                                    <div>
+                                        <div style={{ fontSize: ".67rem", color: "var(--g5)", textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 1 }}>Payment Status</div>
+                                        <div style={{ fontWeight: 700, fontSize: ".875rem", color: statusColor }}>{statusText}</div>
                                     </div>
                                 </div>
+                                {apt.payment.transactionId && (
+                                    <div style={{ textAlign: "right" }}>
+                                        <div style={{ fontSize: ".67rem", color: "var(--g5)", textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 1 }}>Transaction ID</div>
+                                        <div style={{ fontWeight: 600, fontSize: ".75rem", color: "var(--g7)", fontFamily: "monospace" }}>{apt.payment.transactionId.slice(-12)}</div>
+                                    </div>
+                                )}
                             </div>
-                            {apt.payment.transactionId && (
-                                <div style={{ textAlign: "right" }}>
-                                    <div style={{ fontSize: ".67rem", color: "var(--g5)", textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 1 }}>Transaction ID</div>
-                                    <div style={{ fontWeight: 600, fontSize: ".75rem", color: "var(--g7)", fontFamily: "monospace" }}>{apt.payment.transactionId.slice(-12)}</div>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                        );
+                    })()}
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
                         {[["🧑⚕️ Patient", [["Name", pname], ["Email", pemail], ["Phone", pphone]]], ["👨⚕️ Doctor", [["Name", doc.name], ["Specialization", doc.spec], ["Qualification", doc.qual]]]].map(([tit, rows]) => (
                             <div key={tit} style={{ border: "1.5px solid var(--g2)", borderRadius: 10, overflow: "hidden" }}>

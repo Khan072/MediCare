@@ -45,6 +45,26 @@ export default function Book({ go }) {
         setShowPayment(true);
     };
 
+    const handlePayLater = async () => {
+        if (!user) { go("login"); return; }
+        sl(true);
+        try {
+            const res = await bookAppointment({
+                doctor: doc,
+                date: dt,
+                slot,
+                reason: rsn,
+                symptoms: sym.split(",").map(s => s.trim()).filter(Boolean),
+                paymentMethod: "pay_later",
+            });
+            sdn(res.data);
+        } catch (err) {
+            alert(err.response?.data?.message || "Booking failed. Please try again.");
+        } finally {
+            sl(false);
+        }
+    };
+
     const handlePaymentSuccess = async (paymentIntentId) => {
         setShowPayment(false);
         sl(true);
@@ -159,9 +179,18 @@ export default function Book({ go }) {
                                                 <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: ".35rem 0", borderBottom: "1px dashed var(--g2)", fontSize: ".85rem" }}><span style={{ color: "var(--g5)" }}>{l}</span><strong>{v}</strong></div>
                                             ))}
                                         </div>
-                                        <button className="btn bP" style={{ width: "100%", padding: ".8rem" }} onClick={handlePayNow} disabled={ld || !rsn.trim() || !user}>
-                                            {!user ? "Login to Book" : ld ? "Booking..." : "💳 Pay ₹" + doc.fee + " & Book"}
-                                        </button>
+                                        <div style={{ display: "flex", gap: ".75rem", alignItems: "stretch" }}>
+                                            <button className="btn bP" style={{ flex: 1, padding: ".8rem" }} onClick={handlePayNow} disabled={ld || !rsn.trim() || !user}>
+                                                {!user ? "Login to Book" : ld ? "Booking..." : "💳 Pay Now ₹" + doc.fee}
+                                            </button>
+                                            <div style={{ display: "flex", alignItems: "center", color: "var(--g4)", fontSize: ".75rem", fontWeight: 600 }}>or</div>
+                                            <button style={{ flex: 1, padding: ".8rem", border: "2px solid #f59e0b", borderRadius: 10, background: "#fffbeb", color: "#92400e", fontWeight: 700, fontSize: ".875rem", cursor: "pointer", fontFamily: "inherit", transition: "all var(--tr)" }} onClick={handlePayLater} disabled={ld || !rsn.trim() || !user}
+                                                onMouseEnter={e => { e.currentTarget.style.background = "#fef3c7"; e.currentTarget.style.borderColor = "#d97706"; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = "#fffbeb"; e.currentTarget.style.borderColor = "#f59e0b"; }}>
+                                                {ld ? "Booking..." : "🏥 Pay Later"}
+                                            </button>
+                                        </div>
+                                        <p style={{ fontSize: ".72rem", color: "var(--g5)", textAlign: "center", marginTop: ".5rem", marginBottom: 0 }}>Pay Later — pay at the hospital reception on your visit day</p>
                                     </div>
                                 )}
                             </div>
