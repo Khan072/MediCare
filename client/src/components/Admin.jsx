@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getAppointments, updateAppointmentStatus, getDoctors, getPatientCount, uploadReport, getAllReports, getDoctorPerformance, getAdminBlogs, createBlog, updateBlog, deleteBlog, getAllFeedbacks, deleteFeedback } from "../api";
+import { getAppointments, updateAppointmentStatus, getDoctors, getPatientCount, uploadReport, getAllReports, getDoctorPerformance, getAdminBlogs, createBlog, updateBlog, deleteBlog, getAllFeedbacks, deleteFeedback, addDoctor, deleteDoctor, getAdminChatbotQAs, createChatbotQA, updateChatbotQA, deleteChatbotQA } from "../api";
+
+const API_BASE = "http://localhost:5000";
 
 const fshort = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
@@ -22,6 +24,15 @@ export default function Admin() {
     const [blogForm, setBlogForm] = useState({ title: "", content: "", tags: "", published: true });
     const [blogMsg, setBlogMsg] = useState({ text: "", type: "" });
     const [editBlogId, setEditBlogId] = useState(null);
+    const [docForm, setDocForm] = useState({ name: "", spec: "", qual: "", exp: "", fee: "", rat: "", pts: "", bio: "", photo: null });
+    const [docAv, setDocAv] = useState([{ day: "Monday", sl: "09:00, 10:00" }]);
+    const [docMsg, setDocMsg] = useState({ text: "", type: "" });
+    const [addingDoc, setAddingDoc] = useState(false);
+    const [showDocForm, setShowDocForm] = useState(false);
+    const [chatQAs, setChatQAs] = useState([]);
+    const [chatForm, setChatForm] = useState({ question: "", keywords: "", answer: "", enabled: true });
+    const [chatMsg, setChatMsg] = useState({ text: "", type: "" });
+    const [editChatId, setEditChatId] = useState(null);
 
     const fetchAll = async () => {
         setLoading(true);
@@ -42,6 +53,7 @@ export default function Admin() {
         try { const perfRes = await getDoctorPerformance(); setPerfData(perfRes.data); } catch (err) { console.error("Failed to fetch performance:", err); }
         try { const blogRes = await getAdminBlogs(); setBlogList(blogRes.data); } catch (err) { console.error("Failed to fetch blogs:", err); }
         try { const fbRes = await getAllFeedbacks(); setFeedbackList(fbRes.data); } catch (err) { console.error("Failed to fetch feedback:", err); }
+        try { const chatRes = await getAdminChatbotQAs(); setChatQAs(chatRes.data); } catch (err) { console.error("Failed to fetch chatbot QAs:", err); }
         setLoading(false);
     };
 
@@ -130,6 +142,88 @@ export default function Admin() {
         try { await deleteFeedback(id); fetchAll(); } catch (err) { alert("Failed to delete."); }
     };
 
+    const handleDoctorSubmit = async (e) => {
+        e.preventDefault();
+        setDocMsg({ text: "", type: "" });
+        if (!docForm.name || !docForm.spec || !docForm.qual || !docForm.exp || !docForm.fee) {
+            setDocMsg({ text: "Name, specialization, qualification, experience, and fee are required.", type: "err" });
+            return;
+        }
+        setAddingDoc(true);
+        try {
+            const fd = new FormData();
+            fd.append("name", docForm.name);
+            fd.append("spec", docForm.spec);
+            fd.append("qual", docForm.qual);
+            fd.append("exp", docForm.exp);
+            fd.append("fee", docForm.fee);
+            fd.append("rat", docForm.rat || "4.5");
+            fd.append("pts", docForm.pts || "0");
+            fd.append("bio", docForm.bio);
+            if (docForm.photo) fd.append("photo", docForm.photo);
+            const avParsed = docAv.map(a => ({ day: a.day, sl: a.sl.split(",").map(s => s.trim()).filter(Boolean) }));
+            fd.append("av", JSON.stringify(avParsed));
+            await addDoctor(fd);
+            setDocMsg({ text: "Doctor added successfully!", type: "ok" });
+            setDocForm({ name: "", spec: "", qual: "", exp: "", fee: "", rat: "", pts: "", bio: "", photo: null });
+            setDocAv([{ day: "Monday", sl: "09:00, 10:00" }]);
+            setShowDocForm(false);
+            fetchAll();
+        } catch (err) {
+            setDocMsg({ text: err.response?.data?.message || "Failed to add doctor.", type: "err" });
+        }
+        setAddingDoc(false);
+    };
+
+    const removeDoctor = async (id) => {
+        if (!confirm("Delete this doctor? This cannot be undone.")) return;
+        try { await deleteDoctor(id); fetchAll(); } catch (err) { alert(err.response?.data?.message || "Failed to delete."); }
+    };
+
+    const handleChatSubmit = async (e) => {
+        e.preventDefault();
+        setChatMsg({ text: "", type: "" });
+        if (!chatForm.question || !chatForm.answer) {
+            setChatMsg({ text: "Question and answer are required.", type: "err" });
+            return;
+        }
+        try {
+            const data = {
+                question: chatForm.question,
+                keywords: chatForm.keywords.split(",").map(k => k.trim().toLowerCase()).filter(Boolean),
+                answer: chatForm.answer,
+                enabled: chatForm.enabled,
+            };
+            if (editChatId) {
+                await updateChatbotQA(editChatId, data);
+                setChatMsg({ text: "Q&A updated successfully!", type: "ok" });
+                setEditChatId(null);
+            } else {
+                await createChatbotQA(data);
+                setChatMsg({ text: "Q&A added successfully!", type: "ok" });
+            }
+            setChatForm({ question: "", keywords: "", answer: "", enabled: true });
+            fetchAll();
+        } catch (err) {
+            setChatMsg({ text: err.response?.data?.message || "Failed.", type: "err" });
+        }
+    };
+
+    const editChat = (qa) => {
+        setEditChatId(qa._id);
+        setChatForm({ question: qa.question, keywords: (qa.keywords || []).join(", "), answer: qa.answer, enabled: qa.enabled });
+        setChatMsg({ text: "", type: "" });
+    };
+
+    const removeChat = async (id) => {
+        if (!confirm("Delete this Q&A?")) return;
+        try { await deleteChatbotQA(id); fetchAll(); } catch (err) { alert("Failed to delete."); }
+    };
+
+    const toggleChat = async (qa) => {
+        try { await updateChatbotQA(qa._id, { enabled: !qa.enabled }); fetchAll(); } catch (err) { alert("Failed to update."); }
+    };
+
     const fmtSize = (b) => b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : (b / 1024).toFixed(0) + " KB";
     const fmtDate = (d) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
     const deadlineStatus = (r) => {
@@ -161,8 +255,8 @@ export default function Admin() {
                     ))}
                 </div>
 
-                <div style={{ display: "flex", gap: ".25rem", marginBottom: "1.75rem", borderBottom: "2px solid var(--g2)" }}>
-                    {[["overview", "📊 Overview"], ["appointments", "📅 Appointments"], ["doctors", "👨⚕️ Doctors"], ["performance", "📈 Performance"], ["reports", "📄 Reports"], ["blog", "📝 Blog"], ["feedback", "💬 Feedback"]].map(([t, l]) => (
+                <div className="admin-tabs" style={{ display: "flex", gap: ".25rem", marginBottom: "1.75rem", borderBottom: "2px solid var(--g2)" }}>
+                    {[["overview", "📊 Overview"], ["appointments", "📅 Appointments"], ["doctors", "👨⚕️ Doctors"], ["performance", "📈 Performance"], ["reports", "📄 Reports"], ["blog", "📝 Blog"], ["feedback", "💬 Feedback"], ["chatbot", "🤖 Chatbot"]].map(([t, l]) => (
                         <button key={t} onClick={() => st(t)} style={{ padding: ".6rem 1.2rem", background: "none", border: "none", fontWeight: 600, fontSize: ".875rem", color: tab === t ? "var(--pm)" : "var(--g5)", cursor: "pointer", borderBottom: `3px solid ${tab === t ? "var(--pm)" : "transparent"}`, marginBottom: -2, fontFamily: "inherit" }}>{l}</button>
                     ))}
                 </div>
@@ -260,23 +354,84 @@ export default function Admin() {
                 )}
 
                 {tab === "doctors" && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(265px,1fr))", gap: "1.1rem" }}>
-                        {docs.map(doc => (
-                            <div key={doc.id} className="card" style={{ padding: "1.25rem" }}>
-                                <div style={{ display: "flex", gap: ".75rem", alignItems: "center", marginBottom: "1rem", paddingBottom: "1rem", borderBottom: "1.5px solid var(--g2)" }}>
-                                    <div style={{ width: 46, height: 46, borderRadius: "50%", background: "linear-gradient(135deg,var(--pm),var(--pl))", color: "#fff", fontSize: "1.15rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{doc.name.charAt(4)?.toUpperCase() || "D"}</div>
-                                    <div><div style={{ fontWeight: 700, fontSize: ".875rem" }}>{doc.name}</div><span className="pill">{doc.spec}</span></div>
-                                </div>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: ".5rem" }}>
-                                    {[[`${doc.exp}yr`, "Experience"], [`⭐ ${doc.rat}`, "Rating"], [doc.pts.toLocaleString(), "Patients"], [`₹${doc.fee}`, "Fee"]].map(([v, l]) => (
-                                        <div key={l} style={{ background: "#fafafa", borderRadius: 6, padding: ".45rem .6rem" }}>
-                                            <div style={{ fontWeight: 700, fontSize: ".875rem", color: "var(--pm)" }}>{v}</div>
-                                            <div style={{ fontSize: ".65rem", color: "var(--g5)" }}>{l}</div>
+                    <div>
+                        {/* Add Doctor Toggle & Message */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                            <h3 style={{ fontSize: "1.1rem", margin: 0 }}>👨‍⚕️ Manage Doctors ({docs.length})</h3>
+                            <button className="btn bP" onClick={() => { setShowDocForm(!showDocForm); setDocMsg({ text: "", type: "" }); }}>{showDocForm ? "✕ Close" : "➕ Add Doctor"}</button>
+                        </div>
+                        {docMsg.text && <div className={`ae ${docMsg.type === "ok" ? "aS" : "aE"}`} style={{ marginBottom: "1rem" }}>{docMsg.text}</div>}
+
+                        {/* Add Doctor Form */}
+                        {showDocForm && (
+                            <div className="card" style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
+                                <h3 style={{ fontSize: "1rem", marginBottom: "1.1rem" }}>📋 Add New Doctor</h3>
+                                <form onSubmit={handleDoctorSubmit}>
+                                    <div className="admin-form-3col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                                        <div><label className="lbl">Full Name *</label><input className="inp" placeholder="Dr. John Doe" value={docForm.name} onChange={e => setDocForm(p => ({ ...p, name: e.target.value }))} /></div>
+                                        <div><label className="lbl">Specialization *</label><input className="inp" placeholder="Cardiology" value={docForm.spec} onChange={e => setDocForm(p => ({ ...p, spec: e.target.value }))} /></div>
+                                        <div><label className="lbl">Qualification *</label><input className="inp" placeholder="MBBS, MD" value={docForm.qual} onChange={e => setDocForm(p => ({ ...p, qual: e.target.value }))} /></div>
+                                    </div>
+                                    <div className="admin-form-4col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                                        <div><label className="lbl">Experience (yrs) *</label><input className="inp" type="number" min="0" placeholder="10" value={docForm.exp} onChange={e => setDocForm(p => ({ ...p, exp: e.target.value }))} /></div>
+                                        <div><label className="lbl">Consultation Fee (₹) *</label><input className="inp" type="number" min="0" placeholder="1500" value={docForm.fee} onChange={e => setDocForm(p => ({ ...p, fee: e.target.value }))} /></div>
+                                        <div><label className="lbl">Rating</label><input className="inp" type="number" step="0.1" min="0" max="5" placeholder="4.5" value={docForm.rat} onChange={e => setDocForm(p => ({ ...p, rat: e.target.value }))} /></div>
+                                        <div><label className="lbl">Patients Seen</label><input className="inp" type="number" min="0" placeholder="500" value={docForm.pts} onChange={e => setDocForm(p => ({ ...p, pts: e.target.value }))} /></div>
+                                    </div>
+                                    <div style={{ marginBottom: "1rem" }}>
+                                        <label className="lbl">Bio</label>
+                                        <textarea className="inp" rows={2} placeholder="Brief description about the doctor..." value={docForm.bio} onChange={e => setDocForm(p => ({ ...p, bio: e.target.value }))} style={{ resize: "vertical" }} />
+                                    </div>
+                                    <div className="admin-form-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                                        <div>
+                                            <label className="lbl">Doctor Photo (JPG / PNG — max 5MB)</label>
+                                            <input type="file" accept=".jpg,.jpeg,.png,.webp" className="inp" style={{ padding: ".4rem .6rem" }} onChange={e => setDocForm(p => ({ ...p, photo: e.target.files[0] || null }))} />
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                    {/* Availability Schedule */}
+                                    <div style={{ marginBottom: "1rem" }}>
+                                        <label className="lbl">Availability Schedule</label>
+                                        {docAv.map((row, i) => (
+                                            <div key={i} style={{ display: "flex", gap: ".6rem", alignItems: "center", marginBottom: ".5rem" }}>
+                                                <select className="inp" style={{ width: 140 }} value={row.day} onChange={e => { const n = [...docAv]; n[i].day = e.target.value; setDocAv(n); }}>
+                                                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(d => <option key={d} value={d}>{d}</option>)}
+                                                </select>
+                                                <input className="inp" style={{ flex: 1 }} placeholder="09:00, 10:00, 11:00" value={row.sl} onChange={e => { const n = [...docAv]; n[i].sl = e.target.value; setDocAv(n); }} />
+                                                <button type="button" onClick={() => setDocAv(docAv.filter((_, j) => j !== i))} style={{ width: 30, height: 30, borderRadius: "50%", border: "1.5px solid #ef4444", background: "#fee2e2", color: "#991b1b", cursor: "pointer", fontSize: ".8rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✕</button>
+                                            </div>
+                                        ))}
+                                        <button type="button" className="btn bO sm" onClick={() => setDocAv([...docAv, { day: "Monday", sl: "" }])} style={{ marginTop: ".25rem" }}>+ Add Day</button>
+                                    </div>
+                                    <button type="submit" className="btn bP" disabled={addingDoc}>{addingDoc ? "Adding..." : "➕ Add Doctor"}</button>
+                                </form>
                             </div>
-                        ))}
+                        )}
+
+                        {/* Doctor Cards */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: "1.1rem" }}>
+                            {docs.map(doc => (
+                                <div key={doc._id || doc.id} className="card" style={{ padding: "1.25rem" }}>
+                                    <div style={{ display: "flex", gap: ".75rem", alignItems: "center", marginBottom: "1rem", paddingBottom: "1rem", borderBottom: "1.5px solid var(--g2)" }}>
+                                        {doc.photo ? (
+                                            <img src={`${API_BASE}/uploads/doctors/${doc.photo}`} alt={doc.name} style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid var(--pm)" }} />
+                                        ) : (
+                                            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,var(--pm),var(--pl))", color: "#fff", fontSize: "1.15rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{doc.name.charAt(4)?.toUpperCase() || "D"}</div>
+                                        )}
+                                        <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: ".875rem" }}>{doc.name}</div><span className="pill">{doc.spec}</span></div>
+                                    </div>
+                                    {doc.bio && <p style={{ fontSize: ".78rem", color: "var(--g6)", lineHeight: 1.5, margin: "0 0 .75rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{doc.bio}</p>}
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: ".5rem", marginBottom: ".75rem" }}>
+                                        {[[`${doc.exp}yr`, "Experience"], [`⭐ ${doc.rat}`, "Rating"], [doc.pts.toLocaleString(), "Patients"], [`₹${doc.fee}`, "Fee"]].map(([v, l]) => (
+                                            <div key={l} style={{ background: "#fafafa", borderRadius: 6, padding: ".45rem .6rem" }}>
+                                                <div style={{ fontWeight: 700, fontSize: ".875rem", color: "var(--pm)" }}>{v}</div>
+                                                <div style={{ fontSize: ".65rem", color: "var(--g5)" }}>{l}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button className="btn sm" style={{ width: "100%", background: "#fee2e2", color: "#991b1b", border: "none", fontWeight: 600 }} onClick={() => removeDoctor(doc._id || doc.id)}>🗑️ Delete Doctor</button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -496,6 +651,72 @@ export default function Admin() {
                                                     <td style={{ padding: ".875rem 1rem", fontSize: ".84rem", color: "var(--g6)", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fb.message}</td>
                                                     <td style={{ padding: ".875rem 1rem", fontSize: ".8rem", color: "var(--g5)" }}>{new Date(fb.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
                                                     <td style={{ padding: ".875rem 1rem" }}><button className="btn sm" style={{ background: "#fee2e2", color: "#991b1b", border: "none" }} onClick={() => removeFeedback(fb._id)}>Delete</button></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* ═══ CHATBOT TAB ═══ */}
+                {tab === "chatbot" && (
+                    <div>
+                        <div className="card" style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
+                            <h3 style={{ fontSize: "1rem", marginBottom: "1.1rem" }}>{editChatId ? "✏️ Edit Q&A" : "🤖 Add Chatbot Q&A"}</h3>
+                            {chatMsg.text && <div className={`ae ${chatMsg.type === "ok" ? "aS" : "aE"}`} style={{ marginBottom: "1rem" }}>{chatMsg.text}</div>}
+                            <form onSubmit={handleChatSubmit}>
+                                <div style={{ marginBottom: "1rem" }}>
+                                    <label className="lbl">Question / Menu Label *</label>
+                                    <input className="inp" placeholder="e.g. What are the visiting hours?" value={chatForm.question} onChange={e => setChatForm(p => ({ ...p, question: e.target.value }))} />
+                                </div>
+                                <div style={{ marginBottom: "1rem" }}>
+                                    <label className="lbl">Keywords (comma separated — used to match user queries)</label>
+                                    <input className="inp" placeholder="e.g. visiting, hours, visit, timing" value={chatForm.keywords} onChange={e => setChatForm(p => ({ ...p, keywords: e.target.value }))} />
+                                </div>
+                                <div style={{ marginBottom: "1rem" }}>
+                                    <label className="lbl">Answer * (use **bold** for emphasis, \n for new lines)</label>
+                                    <textarea className="inp" rows={4} placeholder="The answer the chatbot will give..." value={chatForm.answer} onChange={e => setChatForm(p => ({ ...p, answer: e.target.value }))} style={{ resize: "vertical" }} />
+                                </div>
+                                <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+                                    <label style={{ display: "flex", alignItems: "center", gap: ".4rem", cursor: "pointer", fontSize: ".85rem", fontWeight: 600, color: "var(--g6)" }}>
+                                        <input type="checkbox" checked={chatForm.enabled} onChange={e => setChatForm(p => ({ ...p, enabled: e.target.checked }))} /> Enabled
+                                    </label>
+                                    <div style={{ flex: 1 }} />
+                                    {editChatId && <button type="button" className="btn bS" onClick={() => { setEditChatId(null); setChatForm({ question: "", keywords: "", answer: "", enabled: true }); setChatMsg({ text: "", type: "" }); }}>Cancel</button>}
+                                    <button type="submit" className="btn bP">{editChatId ? "Update Q&A" : "➕ Add Q&A"}</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+                            <div style={{ padding: "1rem 1.25rem", borderBottom: "1.5px solid var(--g2)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <h3 style={{ fontSize: "1rem", margin: 0 }}>📋 All Chatbot Q&As</h3>
+                                <span style={{ fontSize: ".8rem", color: "var(--g5)" }}>{chatQAs.length} item{chatQAs.length !== 1 ? "s" : ""}</span>
+                            </div>
+                            {chatQAs.length === 0 ? <p style={{ padding: "3rem", textAlign: "center", color: "var(--g4)" }}>No custom Q&As yet. The chatbot will use default responses.</p> : (
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                        <thead><tr style={{ background: "#fafafa" }}>
+                                            {["Question", "Keywords", "Answer", "Status", "Actions"].map(h => <th key={h} style={{ padding: ".7rem 1rem", textAlign: "left", fontSize: ".72rem", fontWeight: 700, color: "var(--g5)", textTransform: "uppercase", letterSpacing: ".4px", borderBottom: "1.5px solid var(--g2)" }}>{h}</th>)}
+                                        </tr></thead>
+                                        <tbody>
+                                            {chatQAs.map(qa => (
+                                                <tr key={qa._id} style={{ borderBottom: "1px solid #f5f5f5" }} onMouseEnter={e => e.currentTarget.style.background = "#fafafa"} onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                                                    <td style={{ padding: ".875rem 1rem", fontWeight: 600, fontSize: ".875rem", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{qa.question}</td>
+                                                    <td style={{ padding: ".875rem 1rem" }}>{(qa.keywords || []).slice(0, 3).map((k, i) => <span key={i} className="pill" style={{ marginRight: ".25rem" }}>{k}</span>)}{(qa.keywords || []).length > 3 && <span style={{ fontSize: ".7rem", color: "var(--g5)" }}>+{qa.keywords.length - 3}</span>}</td>
+                                                    <td style={{ padding: ".875rem 1rem", fontSize: ".8rem", color: "var(--g6)", maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{qa.answer}</td>
+                                                    <td style={{ padding: ".875rem 1rem" }}>
+                                                        <button onClick={() => toggleChat(qa)} style={{ padding: ".2rem .6rem", borderRadius: 99, fontSize: ".72rem", fontWeight: 700, border: "none", cursor: "pointer", background: qa.enabled ? "#d1fae5" : "#fee2e2", color: qa.enabled ? "#065f46" : "#991b1b" }}>{qa.enabled ? "Active" : "Disabled"}</button>
+                                                    </td>
+                                                    <td style={{ padding: ".875rem 1rem" }}>
+                                                        <div style={{ display: "flex", gap: ".35rem" }}>
+                                                            <button className="btn bO sm" onClick={() => editChat(qa)}>Edit</button>
+                                                            <button className="btn sm" style={{ background: "#fee2e2", color: "#991b1b", border: "none" }} onClick={() => removeChat(qa._id)}>Delete</button>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>

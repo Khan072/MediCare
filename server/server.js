@@ -25,6 +25,7 @@ app.use("/api/payment", require("./routes/payment"));
 app.use("/api/reports", require("./routes/reports"));
 app.use("/api/blogs", require("./routes/blogs"));
 app.use("/api/feedback", require("./routes/feedback"));
+app.use("/api/chatbot", require("./routes/chatbot"));
 
 // Serve uploaded files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

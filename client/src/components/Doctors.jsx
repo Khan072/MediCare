@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { getDoctors } from "../api";
 
+const API_BASE = "http://localhost:5000";
+
 function Stars({ r }) {
     return (
         <span style={{ color: "#f59e0b", fontSize: ".8rem" }}>
@@ -73,10 +75,14 @@ export default function Doctors({ go }) {
                 <p style={{ color: "var(--g5)", fontSize: ".82rem", marginBottom: "1.1rem" }}>Showing <strong>{fil.length}</strong> doctor{fil.length !== 1 ? "s" : ""}</p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: "1.1rem" }}>
                     {fil.map(doc => (
-                        <div key={doc.id} className="card" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: ".78rem" }}>
+                        <div key={doc._id || doc.id} className="card" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: ".78rem" }}>
                             <div style={{ display: "flex", gap: ".78rem", alignItems: "flex-start" }}>
                                 <div style={{ position: "relative", flexShrink: 0 }}>
-                                    <div style={{ width: 50, height: 50, borderRadius: "50%", background: "linear-gradient(135deg,var(--pm),var(--pl))", color: "#fff", fontSize: "1.2rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{doc.name.charAt(4)?.toUpperCase() || "D"}</div>
+                                    {doc.photo ? (
+                                        <img src={`${API_BASE}/uploads/doctors/${doc.photo}`} alt={doc.name} style={{ width: 50, height: 50, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--pm)" }} />
+                                    ) : (
+                                        <div style={{ width: 50, height: 50, borderRadius: "50%", background: "linear-gradient(135deg,var(--pm),var(--pl))", color: "#fff", fontSize: "1.2rem", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{doc.name.charAt(4)?.toUpperCase() || "D"}</div>
+                                    )}
                                     <div style={{ position: "absolute", bottom: 1, right: 1, width: 12, height: 12, background: "#4ade80", borderRadius: "50%", border: "2px solid #fff" }} />
                                 </div>
                                 <div><h3 style={{ fontSize: ".9rem", marginBottom: ".2rem" }}>{doc.name}</h3><span className="pill">{doc.spec}</span><p style={{ fontSize: ".74rem", color: "var(--g5)", margin: ".18rem 0 0" }}>{doc.qual}</p></div>

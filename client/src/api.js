@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-    baseURL: "https://medicare-m3a0.onrender.com/api",
+    baseURL: "http://localhost:5000/api",
 });
 
 // Attach token to every request
@@ -23,6 +23,9 @@ export const resetPassword = (data) => API.post("/auth/reset-password", data);
 // ── Doctors ──
 export const getDoctors = () => API.get("/doctors");
 export const getDoctor = (id) => API.get(`/doctors/${id}`);
+export const addDoctor = (formData) =>
+    API.post("/doctors", formData);
+export const deleteDoctor = (id) => API.delete(`/doctors/${id}`);
 
 // ── Appointments ──
 export const getAppointments = () => API.get("/appointments");
@@ -67,5 +70,12 @@ export const submitFeedback = (data) => API.post("/feedback", data);
 export const getFeedbacks = () => API.get("/feedback");
 export const getAllFeedbacks = () => API.get("/feedback/admin");
 export const deleteFeedback = (id) => API.delete(`/feedback/${id}`);
+
+// ── Chatbot Q&A ──
+export const getChatbotQAs = () => API.get("/chatbot");
+export const getAdminChatbotQAs = () => API.get("/chatbot/admin");
+export const createChatbotQA = (data) => API.post("/chatbot", data);
+export const updateChatbotQA = (id, data) => API.put(`/chatbot/${id}`, data);
+export const deleteChatbotQA = (id) => API.delete(`/chatbot/${id}`);
 
 export default API;

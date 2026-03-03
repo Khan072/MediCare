@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { getChatbotQAs } from "../api";
 
 const WELCOME = `Welcome to **Medicare Hospital Assistant** 👨‍⚕️🏥\nPlease select an option by typing the number:\n\n1️⃣ Book an Appointment\n2️⃣ Doctor Availability\n3️⃣ Departments & Services\n4️⃣ Emergency Contact\n5️⃣ Hospital Timings\n6️⃣ Lab Tests & Reports\n7️⃣ Insurance & Billing\n8️⃣ Talk to Support`;
 
@@ -16,9 +17,19 @@ const MENU_OPTIONS = [
 // Serious symptom keywords
 const SERIOUS = ["chest pain", "breathing", "unconscious", "bleeding", "heart attack", "stroke", "seizure", "faint", "collapse", "not breathing", "severe pain", "accident"];
 
-function getReply(msg) {
+function getReply(msg, customQAs) {
     const m = msg.trim();
     const lo = m.toLowerCase();
+
+    // ── Check admin-defined Q&As first (keyword matching) ──
+    if (customQAs && customQAs.length > 0) {
+        for (const qa of customQAs) {
+            if (qa.keywords && qa.keywords.length > 0) {
+                const matched = qa.keywords.some(k => lo.includes(k.toLowerCase()));
+                if (matched) return qa.answer;
+            }
+        }
+    }
 
     // ── Number-based menu selection ──
     if (/^1$/.test(m)) {
@@ -110,9 +121,16 @@ export default function Chatbot() {
     const [inp, si] = useState("");
     const [ld, sl] = useState(false);
     const [unread, su] = useState(0);
+    const [customQAs, setCustomQAs] = useState([]);
 
     const endRef = useRef();
     const inpRef = useRef();
+
+    useEffect(() => {
+        getChatbotQAs()
+            .then(res => setCustomQAs(res.data))
+            .catch(() => { });
+    }, []);
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -133,7 +151,7 @@ export default function Chatbot() {
         si("");
         sl(true);
 
-        const reply = getReply(msg);
+        const reply = getReply(msg, customQAs);
 
         // Typing delay for realism
         await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 400));

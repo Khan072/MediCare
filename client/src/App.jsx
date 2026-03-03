@@ -82,6 +82,23 @@ h1,h2,h3,h4{font-weight:700;line-height:1.2;color:var(--g9);margin-bottom:.5rem;
   h2{font-size:1.4rem!important;}
   .box{width:95vw!important;padding:1rem!important;}
   .ov{padding:.5rem!important;}
+
+  /* ── Admin Dashboard Mobile ── */
+  .admin-tabs{overflow-x:auto!important;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap!important;}
+  .admin-tabs::-webkit-scrollbar{display:none;}
+  .admin-tabs button{flex-shrink:0!important;padding:.5rem .75rem!important;font-size:.78rem!important;white-space:nowrap!important;}
+  .admin-form-3col{grid-template-columns:1fr!important;}
+  .admin-form-4col{grid-template-columns:1fr 1fr!important;}
+  .admin-form-2col{grid-template-columns:1fr!important;}
+  .admin-form-row{flex-direction:column!important;align-items:stretch!important;}
+  .admin-form-row .btn{width:100%!important;}
+}
+
+@media(max-width:480px){
+  .admin-stats{grid-template-columns:1fr!important;}
+  .admin-form-4col{grid-template-columns:1fr!important;}
+  .stats-row{grid-template-columns:repeat(2,1fr)!important;}
+  .dash-stats{grid-template-columns:1fr!important;}
 }
 `;
 
