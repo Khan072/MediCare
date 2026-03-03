@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getAppointments, updateAppointmentStatus, getDoctors, getPatientCount, uploadReport, getAllReports, getDoctorPerformance, getAdminBlogs, createBlog, updateBlog, deleteBlog, getAllFeedbacks, deleteFeedback, addDoctor, deleteDoctor, getAdminChatbotQAs, createChatbotQA, updateChatbotQA, deleteChatbotQA } from "../api";
+import { getAppointments, updateAppointmentStatus, getDoctors, getPatientCount, uploadReport, getAllReports, getDoctorPerformance, getAdminBlogs, createBlog, updateBlog, deleteBlog, getAllFeedbacks, deleteFeedback, addDoctor, deleteDoctor, updateDoctor, getAdminChatbotQAs, createChatbotQA, updateChatbotQA, deleteChatbotQA } from "../api";
 
 const API_BASE = "http://localhost:5000";
 
@@ -29,6 +29,7 @@ export default function Admin() {
     const [docMsg, setDocMsg] = useState({ text: "", type: "" });
     const [addingDoc, setAddingDoc] = useState(false);
     const [showDocForm, setShowDocForm] = useState(false);
+    const [editDocId, setEditDocId] = useState(null);
     const [chatQAs, setChatQAs] = useState([]);
     const [chatForm, setChatForm] = useState({ question: "", keywords: "", answer: "", enabled: true });
     const [chatMsg, setChatMsg] = useState({ text: "", type: "" });
@@ -163,16 +164,44 @@ export default function Admin() {
             if (docForm.photo) fd.append("photo", docForm.photo);
             const avParsed = docAv.map(a => ({ day: a.day, sl: a.sl.split(",").map(s => s.trim()).filter(Boolean) }));
             fd.append("av", JSON.stringify(avParsed));
-            await addDoctor(fd);
-            setDocMsg({ text: "Doctor added successfully!", type: "ok" });
+            if (editDocId) {
+                await updateDoctor(editDocId, fd);
+                setDocMsg({ text: "Doctor updated successfully!", type: "ok" });
+                setEditDocId(null);
+            } else {
+                await addDoctor(fd);
+                setDocMsg({ text: "Doctor added successfully!", type: "ok" });
+            }
             setDocForm({ name: "", spec: "", qual: "", exp: "", fee: "", rat: "", pts: "", bio: "", photo: null });
             setDocAv([{ day: "Monday", sl: "09:00, 10:00" }]);
             setShowDocForm(false);
             fetchAll();
         } catch (err) {
-            setDocMsg({ text: err.response?.data?.message || "Failed to add doctor.", type: "err" });
+            setDocMsg({ text: err.response?.data?.message || (editDocId ? "Failed to update doctor." : "Failed to add doctor."), type: "err" });
         }
         setAddingDoc(false);
+    };
+
+    const editDoctor = (doc) => {
+        setEditDocId(doc._id || doc.id);
+        setDocForm({
+            name: doc.name || "",
+            spec: doc.spec || "",
+            qual: doc.qual || "",
+            exp: doc.exp?.toString() || "",
+            fee: doc.fee?.toString() || "",
+            rat: doc.rat?.toString() || "",
+            pts: doc.pts?.toString() || "",
+            bio: doc.bio || "",
+            photo: null,
+        });
+        setDocAv(
+            doc.av && doc.av.length > 0
+                ? doc.av.map(a => ({ day: a.day, sl: (a.sl || []).join(", ") }))
+                : [{ day: "Monday", sl: "09:00, 10:00" }]
+        );
+        setShowDocForm(true);
+        setDocMsg({ text: "", type: "" });
     };
 
     const removeDoctor = async (id) => {
@@ -358,14 +387,14 @@ export default function Admin() {
                         {/* Add Doctor Toggle & Message */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
                             <h3 style={{ fontSize: "1.1rem", margin: 0 }}>👨‍⚕️ Manage Doctors ({docs.length})</h3>
-                            <button className="btn bP" onClick={() => { setShowDocForm(!showDocForm); setDocMsg({ text: "", type: "" }); }}>{showDocForm ? "✕ Close" : "➕ Add Doctor"}</button>
+                            <button className="btn bP" onClick={() => { setShowDocForm(!showDocForm); setDocMsg({ text: "", type: "" }); if (showDocForm) { setEditDocId(null); setDocForm({ name: "", spec: "", qual: "", exp: "", fee: "", rat: "", pts: "", bio: "", photo: null }); setDocAv([{ day: "Monday", sl: "09:00, 10:00" }]); } }}>{showDocForm ? "✕ Close" : "➕ Add Doctor"}</button>
                         </div>
                         {docMsg.text && <div className={`ae ${docMsg.type === "ok" ? "aS" : "aE"}`} style={{ marginBottom: "1rem" }}>{docMsg.text}</div>}
 
                         {/* Add Doctor Form */}
                         {showDocForm && (
                             <div className="card" style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
-                                <h3 style={{ fontSize: "1rem", marginBottom: "1.1rem" }}>📋 Add New Doctor</h3>
+                                <h3 style={{ fontSize: "1rem", marginBottom: "1.1rem" }}>{editDocId ? "✏️ Edit Doctor" : "📋 Add New Doctor"}</h3>
                                 <form onSubmit={handleDoctorSubmit}>
                                     <div className="admin-form-3col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
                                         <div><label className="lbl">Full Name *</label><input className="inp" placeholder="Dr. John Doe" value={docForm.name} onChange={e => setDocForm(p => ({ ...p, name: e.target.value }))} /></div>
@@ -402,7 +431,10 @@ export default function Admin() {
                                         ))}
                                         <button type="button" className="btn bO sm" onClick={() => setDocAv([...docAv, { day: "Monday", sl: "" }])} style={{ marginTop: ".25rem" }}>+ Add Day</button>
                                     </div>
-                                    <button type="submit" className="btn bP" disabled={addingDoc}>{addingDoc ? "Adding..." : "➕ Add Doctor"}</button>
+                                    <div style={{ display: "flex", gap: ".5rem" }}>
+                                        {editDocId && <button type="button" className="btn bS" onClick={() => { setEditDocId(null); setDocForm({ name: "", spec: "", qual: "", exp: "", fee: "", rat: "", pts: "", bio: "", photo: null }); setDocAv([{ day: "Monday", sl: "09:00, 10:00" }]); setDocMsg({ text: "", type: "" }); }}>Cancel</button>}
+                                        <button type="submit" className="btn bP" disabled={addingDoc}>{addingDoc ? (editDocId ? "Updating..." : "Adding...") : (editDocId ? "✏️ Update Doctor" : "➕ Add Doctor")}</button>
+                                    </div>
                                 </form>
                             </div>
                         )}
@@ -428,7 +460,10 @@ export default function Admin() {
                                             </div>
                                         ))}
                                     </div>
-                                    <button className="btn sm" style={{ width: "100%", background: "#fee2e2", color: "#991b1b", border: "none", fontWeight: 600 }} onClick={() => removeDoctor(doc._id || doc.id)}>🗑️ Delete Doctor</button>
+                                    <div style={{ display: "flex", gap: ".5rem" }}>
+                                        <button className="btn sm" style={{ flex: 1, background: "#dbeafe", color: "#1e40af", border: "none", fontWeight: 600 }} onClick={() => editDoctor(doc)}>✏️ Edit</button>
+                                        <button className="btn sm" style={{ flex: 1, background: "#fee2e2", color: "#991b1b", border: "none", fontWeight: 600 }} onClick={() => removeDoctor(doc._id || doc.id)}>🗑️ Delete</button>
+                                    </div>
                                 </div>
                             ))}
                         </div>

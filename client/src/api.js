@@ -24,8 +24,14 @@ export const resetPassword = (data) => API.post("/auth/reset-password", data);
 export const getDoctors = () => API.get("/doctors");
 export const getDoctor = (id) => API.get(`/doctors/${id}`);
 export const addDoctor = (formData) =>
-    API.post("/doctors", formData);
+    API.post("/doctors", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
 export const deleteDoctor = (id) => API.delete(`/doctors/${id}`);
+export const updateDoctor = (id, formData) =>
+    API.put(`/doctors/${id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
 
 // ── Appointments ──
 export const getAppointments = () => API.get("/appointments");

@@ -86,6 +86,45 @@ router.post("/", protect, admin, upload.single("photo"), async (req, res) => {
     }
 });
 
+// PUT /api/doctors/:id — Admin updates a doctor
+router.put("/:id", protect, admin, upload.single("photo"), async (req, res) => {
+    try {
+        const doc = await Doctor.findById(req.params.id);
+        if (!doc) {
+            if (req.file) fs.unlinkSync(req.file.path);
+            return res.status(404).json({ message: "Doctor not found" });
+        }
+
+        const { name, spec, qual, exp, fee, rat, pts, bio, av } = req.body;
+
+        if (name) doc.name = name;
+        if (spec) doc.spec = spec;
+        if (qual) doc.qual = qual;
+        if (exp) doc.exp = Number(exp);
+        if (fee) doc.fee = Number(fee);
+        if (rat !== undefined) doc.rat = Number(rat);
+        if (pts !== undefined) doc.pts = Number(pts);
+        if (bio !== undefined) doc.bio = bio;
+        if (av) doc.av = JSON.parse(av);
+
+        // Handle photo update
+        if (req.file) {
+            // Delete old photo if it exists
+            if (doc.photo) {
+                const oldPhotoPath = path.join(uploadDir, doc.photo);
+                if (fs.existsSync(oldPhotoPath)) fs.unlinkSync(oldPhotoPath);
+            }
+            doc.photo = req.file.filename;
+        }
+
+        await doc.save();
+        res.json(doc);
+    } catch (error) {
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // DELETE /api/doctors/:id — Admin deletes a doctor
 router.delete("/:id", protect, admin, async (req, res) => {
     try {
