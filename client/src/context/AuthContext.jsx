@@ -24,8 +24,8 @@ export function AuthProvider({ children }) {
         }
     }, []);
 
-    const login = async (email, password) => {
-        const res = await loginUser({ email, password });
+    const login = async (identifier, password) => {
+        const res = await loginUser({ identifier, password });
         localStorage.setItem("medicare_token", res.data.token);
         setUser(res.data);
         return res.data;

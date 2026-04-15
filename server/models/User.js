@@ -7,12 +7,16 @@ const userSchema = new mongoose.Schema(
         email: { type: String, required: true, unique: true, lowercase: true, trim: true },
         password: { type: String, required: true, minlength: 6 },
         phone: { type: String, default: "" },
+        phoneVerified: { type: Boolean, default: false },
+        idNumber: { type: String, unique: true, sparse: true, trim: true },
         dob: { type: String, default: "" },
         gender: { type: String, enum: ["male", "female", "other", ""], default: "" },
         blood: { type: String, default: "" },
         role: { type: String, enum: ["patient", "admin"], default: "patient" },
         resetPasswordToken: { type: String },
         resetPasswordExpire: { type: Date },
+        phoneOtp: { type: String },
+        phoneOtpExpire: { type: Date },
     },
     { timestamps: true }
 );

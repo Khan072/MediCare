@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { t, getLang, setLang, getCurrency, setCurrency } from "../i18n";
 
 export default function Navbar({ pg, go }) {
     const { user, logout } = useAuth();
     const [sc, setSc] = useState(false);
     const [dd, setDd] = useState(false);
     const [mob, setMob] = useState(false);
+    const [lang, setLangState] = useState(getLang());
+    const [cur, setCurState] = useState(getCurrency());
     const ref = useRef();
     useEffect(() => {
         const fn = () => setSc(window.scrollY > 20);
@@ -28,13 +31,26 @@ export default function Navbar({ pg, go }) {
         setMob(false);
     };
 
+    const toggleLang = () => {
+        const newLang = lang === "en" ? "ar" : "en";
+        setLang(newLang);
+        setLangState(newLang);
+        window.dispatchEvent(new Event("langchange"));
+    };
+
+    const handleCurrencyChange = (e) => {
+        setCurrency(e.target.value);
+        setCurState(e.target.value);
+        window.dispatchEvent(new Event("langchange"));
+    };
+
     const links = [
-        ["home", "Home"],
-        ["doctors", "Doctors"],
-        ["book", "Book Appointment"],
-        ["blog", "Blog"],
-        ...(user ? [["dash", "My Appointments"], ["feedback", "Feedback"]] : []),
-        ...(user?.role === "admin" ? [["admin", "Admin"]] : []),
+        ["home", t("nav.home")],
+        ["doctors", t("nav.doctors")],
+        ["book", t("nav.book")],
+        ["blog", t("nav.blog")],
+        ...(user ? [["dash", t("nav.dash")], ["feedback", t("nav.feedback")]] : []),
+        ...(user?.role === "admin" ? [["admin", t("nav.admin")]] : []),
     ];
 
     return (
@@ -117,6 +133,40 @@ export default function Navbar({ pg, go }) {
                     <span style={mob ? { opacity: 0 } : {}} />
                     <span style={mob ? { transform: "rotate(-45deg) translate(5px, -5px)" } : {}} />
                 </button>
+
+                {/* Language & Currency toggles */}
+                <div style={{ display: "flex", alignItems: "center", gap: ".4rem", marginLeft: "auto" }}>
+                    <button
+                        onClick={toggleLang}
+                        title={lang === "en" ? "Switch to Arabic" : "Switch to English"}
+                        style={{
+                            background: "var(--bg2)", border: "1.5px solid var(--g2)",
+                            borderRadius: 6, padding: ".25rem .55rem", cursor: "pointer",
+                            fontSize: ".75rem", fontWeight: 700, color: "var(--pm)",
+                            fontFamily: "inherit", transition: "all var(--tr)",
+                        }}
+                    >
+                        {lang === "en" ? "🌐 AR" : "🌐 EN"}
+                    </button>
+                    <select
+                        value={cur}
+                        onChange={handleCurrencyChange}
+                        style={{
+                            background: "var(--bg2)", border: "1.5px solid var(--g2)",
+                            borderRadius: 6, padding: ".22rem .35rem", cursor: "pointer",
+                            fontSize: ".72rem", fontWeight: 600, color: "var(--g7)",
+                            fontFamily: "inherit",
+                        }}
+                    >
+                        <option value="inr">₹ INR</option>
+                        <option value="usd">$ USD</option>
+                        <option value="sar">﷼ SAR</option>
+                        <option value="aed">د.إ AED</option>
+                        <option value="egp">ج.م EGP</option>
+                        <option value="eur">€ EUR</option>
+                        <option value="gbp">£ GBP</option>
+                    </select>
+                </div>
 
                 <div className={`nav-links${mob ? " open" : ""}`}>
                     {links.map(([p, l]) => (
@@ -284,7 +334,7 @@ export default function Navbar({ pg, go }) {
                                             (e.target.style.background = "none")
                                         }
                                     >
-                                        🚪 Sign Out
+                                        🚪 {t("nav.logout")}
                                     </button>
                                 </div>
                             )}
@@ -292,10 +342,10 @@ export default function Navbar({ pg, go }) {
                     ) : (
                         <>
                             <button className="btn bO sm" onClick={() => go("login")}>
-                                Login
+                                {t("nav.login")}
                             </button>
                             <button className="btn bP sm" onClick={() => go("signup")}>
-                                Sign Up
+                                {t("nav.signup")}
                             </button>
                         </>
                     )}

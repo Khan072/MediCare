@@ -12,6 +12,28 @@ router.post("/", protect, async (req, res) => {
     try {
         const { doctor, date, slot, reason, symptoms, paymentIntentId, paymentMethod } = req.body;
 
+        // ── Duplicate booking prevention ──
+        const existing = await Appointment.findOne({
+            "doctor.id": doctor.id,
+            date,
+            slot,
+            status: { $ne: "cancelled" },
+        });
+        if (existing) {
+            return res.status(409).json({ message: "This time slot is already booked. Please choose a different time." });
+        }
+
+        // Check if same user already has an appointment with same doctor on same date
+        const userDup = await Appointment.findOne({
+            user: req.user._id,
+            "doctor.id": doctor.id,
+            date,
+            status: { $ne: "cancelled" },
+        });
+        if (userDup) {
+            return res.status(409).json({ message: "You already have an appointment with this doctor on this date." });
+        }
+
         // --- Pay Later flow: skip Stripe, book immediately ---
         let paymentData = {
             status: "pending",
@@ -64,6 +86,22 @@ router.post("/", protect, async (req, res) => {
         });
 
         res.status(201).json(apt);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// GET /api/appointments/booked-slots?doctorId=xxx&date=YYYY-MM-DD — Get booked slots
+router.get("/booked-slots", async (req, res) => {
+    try {
+        const { doctorId, date } = req.query;
+        if (!doctorId || !date) return res.status(400).json({ message: "doctorId and date are required" });
+        const booked = await Appointment.find({
+            "doctor.id": doctorId,
+            date,
+            status: { $ne: "cancelled" },
+        }).select("slot");
+        res.json(booked.map((a) => a.slot));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

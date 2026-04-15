@@ -42,4 +42,7 @@ const appointmentSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Compound index for duplicate booking prevention
+appointmentSchema.index({ "doctor.id": 1, date: 1, slot: 1 });
+
 module.exports = mongoose.model("Appointment", appointmentSchema);

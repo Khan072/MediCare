@@ -3,8 +3,10 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { createPaymentIntent, getStripeConfig } from "../api";
 
+const CURRENCY_SYMBOLS = { inr: "₹", usd: "$", sar: "﷼", aed: "د.إ", egp: "ج.م", eur: "€", gbp: "£" };
+
 /* ── Checkout Form inside Stripe Elements ── */
-function CheckoutForm({ amount, onSuccess, onCancel, loading, setLoading }) {
+function CheckoutForm({ amount, currencySymbol, onSuccess, onCancel, loading, setLoading }) {
     const stripe = useStripe();
     const elements = useElements();
     const [error, setError] = useState(null);
@@ -89,7 +91,7 @@ function CheckoutForm({ amount, onSuccess, onCancel, loading, setLoading }) {
                             Processing...
                         </span>
                     ) : (
-                        `Pay ₹${amount}`
+                        `Pay ${currencySymbol}${amount}`
                     )}
                 </button>
             </div>
@@ -107,7 +109,9 @@ const getStripePromise = async () => {
     return stripePromise;
 };
 
-export default function Payment({ amount, doctorName, date, onSuccess, onCancel }) {
+export default function Payment({ amount, currency, doctorName, date, onSuccess, onCancel }) {
+    const cur = (currency || "inr").toLowerCase();
+    const currencySymbol = CURRENCY_SYMBOLS[cur] || "₹";
     const [clientSecret, setClientSecret] = useState(null);
     const [paymentIntentId, setPaymentIntentId] = useState(null);
     const [stripeObj, setStripeObj] = useState(null);
@@ -124,6 +128,7 @@ export default function Payment({ amount, doctorName, date, onSuccess, onCancel 
 
             const res = await createPaymentIntent({
                 amount,
+                currency: cur,
                 appointmentDetails: { doctorName, date },
             });
             setClientSecret(res.data.clientSecret);
@@ -182,7 +187,7 @@ export default function Payment({ amount, doctorName, date, onSuccess, onCancel 
                                 Payment for Appointment
                             </div>
                             <div style={{ fontSize: "1.5rem", fontWeight: 800 }}>
-                                ₹{amount}
+                                {currencySymbol}{amount}
                             </div>
                         </div>
                         <button
@@ -348,7 +353,7 @@ export default function Payment({ amount, doctorName, date, onSuccess, onCancel 
                                             Initializing...
                                         </span>
                                     ) : (
-                                        `💳 Pay ₹${amount}`
+                                        `💳 Pay ${currencySymbol}${amount}`
                                     )}
                                 </button>
                             </div>
@@ -374,6 +379,7 @@ export default function Payment({ amount, doctorName, date, onSuccess, onCancel 
                             >
                                 <CheckoutForm
                                     amount={amount}
+                                    currencySymbol={currencySymbol}
                                     onSuccess={handlePaymentSuccess}
                                     onCancel={onCancel}
                                     loading={loading}

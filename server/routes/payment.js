@@ -7,16 +7,22 @@ const router = express.Router();
 router.post("/create-intent", protect, async (req, res) => {
     try {
         const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-        const { amount, appointmentDetails } = req.body;
+        const { amount, appointmentDetails, currency } = req.body;
 
         if (!amount || amount <= 0) {
             return res.status(400).json({ message: "Invalid payment amount" });
         }
 
-        // Amount in smallest currency unit (paise for INR)
+        const supportedCurrencies = ["inr", "usd", "sar", "aed", "egp", "eur", "gbp"];
+        const cur = (currency || "inr").toLowerCase();
+        if (!supportedCurrencies.includes(cur)) {
+            return res.status(400).json({ message: `Unsupported currency. Supported: ${supportedCurrencies.join(", ")}` });
+        }
+
+        // Amount in smallest currency unit (paise for INR, cents for USD, etc.)
         const paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(amount * 100),
-            currency: "inr",
+            currency: cur,
             automatic_payment_methods: { enabled: true },
             metadata: {
                 userId: req.user._id.toString(),

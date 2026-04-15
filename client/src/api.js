@@ -19,6 +19,8 @@ export const signupUser = (data) => API.post("/auth/signup", data);
 export const getMe = () => API.get("/auth/me");
 export const forgotPassword = (data) => API.post("/auth/forgot-password", data);
 export const resetPassword = (data) => API.post("/auth/reset-password", data);
+export const sendPhoneOtp = (data) => API.post("/auth/send-phone-otp", data);
+export const verifyPhoneOtp = (data) => API.post("/auth/verify-phone-otp", data);
 
 // ── Doctors ──
 export const getDoctors = () => API.get("/doctors");
@@ -39,6 +41,7 @@ export const getAppointment = (id) => API.get(`/appointments/${id}`);
 export const bookAppointment = (data) => API.post("/appointments", data);
 export const updateAppointmentStatus = (id, status) =>
     API.put(`/appointments/${id}/status`, { status });
+export const getBookedSlots = (doctorId, date) => API.get(`/appointments/booked-slots?doctorId=${doctorId}&date=${date}`);
 
 // ── Users ──
 export const getProfile = () => API.get("/users/profile");

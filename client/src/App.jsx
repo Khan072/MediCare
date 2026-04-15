@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Home from "./components/Home";
@@ -105,6 +105,15 @@ h1,h2,h3,h4{font-weight:700;line-height:1.2;color:var(--g9);margin-bottom:.5rem;
 export default function App() {
     const { user, loading } = useAuth();
     const [pg, go] = useState("home");
+    const [_langKey, setLangKey] = useState(0);
+
+    // Listen for language/currency changes to force re-render
+    useEffect(() => {
+        const handler = () => setLangKey(k => k + 1);
+        window.addEventListener("langchange", handler);
+        return () => window.removeEventListener("langchange", handler);
+    }, []);
+
     const setPage = (p) => {
         go(p);
         window.scrollTo(0, 0);
